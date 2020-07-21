@@ -21,21 +21,21 @@ namespace QuodAstrum.Projectiles.Minions
 	 * This is NOT an in-depth guide to advanced minion AI
 	 */
 
-	public class DuneFrostBuff : ModBuff
+	public class StarlightEmissaryBuff : ModBuff
 	{
 		public override void SetDefaults()
 		{
-			DisplayName.SetDefault("Dune Frost");
-			Description.SetDefault("The Dune Frost will fight for you");
+			DisplayName.SetDefault("StarLight Emissary");
+			Description.SetDefault("The StarLight Emissary will fight for you");
 			Main.buffNoSave[Type] = true;
 			Main.buffNoTimeDisplay[Type] = true;
 		}
 
 		public override void Update(Player player, ref int buffIndex)
 		{
-			if (player.ownedProjectileCounts[ProjectileType<DuneFrost>()] > 0)
+			if (player.ownedProjectileCounts[ProjectileType<StarlightEmissary>()] > 0)
 			{
-				player.buffTime[buffIndex] = 18000;
+				player.buffTime[buffIndex] = 400;
 			}
 			else
 			{
@@ -45,52 +45,45 @@ namespace QuodAstrum.Projectiles.Minions
 		}
 	}
 
-	public class DuneFrostStaff : ModItem
+	public class StaffoftheStarlightEmissary : ModItem
 	{
 		public override void SetStaticDefaults()
 		{
-			DisplayName.SetDefault("Staff of the Dune Frost");
-			Tooltip.SetDefault("Summons a Dune Frost to fight for you");
+			DisplayName.SetDefault("Staff of the Starlight Emissary");
+			Tooltip.SetDefault("Summons a Starlight Emissary to fight for you\nDamage outputs are randomized\nBro you just summoned cringe\nYou are going to lose minion slots!");
 			ItemID.Sets.GamepadWholeScreenUseRange[item.type] = true; // This lets the player target anywhere on the whole screen while using a controller.
 			ItemID.Sets.LockOnIgnoresCollision[item.type] = true;
 		}
 
 		public override void SetDefaults()
 		{
-			item.damage = 20;
-			item.knockBack = 3f;
+			item.damage = 30;
+			item.knockBack = 20;
+			item.crit = 40;
 			item.mana = 10;
-			item.width = 32;
-			item.height = 32;
-			item.useTime = 36;
-			item.useAnimation = 36;
+			item.width = 42;
+			item.height = 42;
+			item.useTime = 15;
+			item.useAnimation = 15;
+			item.autoReuse = true;
 			item.useStyle = ItemUseStyleID.SwingThrow;
 			item.value = Item.buyPrice(0, 30, 0, 0);
-			item.rare = ItemRarityID.Cyan;
-			item.UseSound = SoundID.Item44;
+			item.rare = ItemRarityID.Expert;
+			item.UseSound = SoundID.Item4;
 
 			// These below are needed for a minion weapon
 			item.noMelee = true;
 			item.summon = true;
-			item.buffType = BuffType<DuneFrostBuff>();
+			item.buffType = BuffType<StarlightEmissaryBuff>();
 			// No buffTime because otherwise the item tooltip would say something like "1 minute duration"
-			item.shoot = ProjectileType<DuneFrost>();
-		}
-		public override void AddRecipes()
-		{
-			ModRecipe recipe = new ModRecipe(mod);
-			recipe.AddIngredient(mod, "DuneScale", 30);
-			recipe.AddIngredient(mod, "FrostScale", 30);
-			recipe.AddTile(TileID.Anvils);
-			recipe.SetResult(this);
-			recipe.AddRecipe();
+			item.shoot = ProjectileType<StarlightEmissary>();
 		}
 
 		public override bool Shoot(Player player, ref Vector2 position, ref float speedX, ref float speedY, ref int type, ref int damage, ref float knockBack)
 		{
 			// This is needed so the buff that keeps your minion alive and allows you to despawn it properly applies
 			player.AddBuff(item.buffType, 2);
-
+			damage = damage * Main.rand.Next(1, 3);
 			// Here you can change where the minion is spawned. Most vanilla minions spawn at the cursor position.
 			position = Main.MouseWorld;
 			return true;
@@ -105,11 +98,11 @@ namespace QuodAstrum.Projectiles.Minions
 	 * If the player targets a certain NPC with right-click, it will fly through tiles to it
 	 * If it isn't attacking, it will float near the player with minimal movement
 	 */
-	public class DuneFrost : ModProjectile
+	public class StarlightEmissary : ModProjectile
 	{
 		public override void SetStaticDefaults()
 		{
-			DisplayName.SetDefault("Dune Frost");
+			DisplayName.SetDefault("StarlightEmissary");
 			// Sets the amount of frames this minion has on its spritesheet
 			Main.projFrames[projectile.type] = 4;
 			// This is necessary for right-click targeting
@@ -153,23 +146,16 @@ namespace QuodAstrum.Projectiles.Minions
 		{
 			return true;
 		}
-		public override void OnHitNPC(NPC target, int damage, float knockback, bool crit)
-		{
-			target.AddBuff(BuffID.OnFire, 180);
-			target.AddBuff(BuffID.Frostburn, 180);
-		}
-
 		public override void AI()
 		{
 			Player player = Main.player[projectile.owner];
-
 			#region Active check
 			// This is the "active check", makes sure the minion is alive while the player is alive, and despawns if not
 			if (player.dead || !player.active)
 			{
-				player.ClearBuff(BuffType<DuneFrostBuff>());
+				player.ClearBuff(BuffType<StarlightEmissaryBuff>());
 			}
-			if (player.HasBuff(BuffType<DuneFrostBuff>()))
+			if (player.HasBuff(BuffType<StarlightEmissaryBuff>()))
 			{
 				projectile.timeLeft = 2;
 			}
@@ -249,7 +235,7 @@ namespace QuodAstrum.Projectiles.Minions
 						// Additional check for this specific minion behavior, otherwise it will stop attacking once it dashed through an enemy while flying though tiles afterwards
 						// The number depends on various parameters seen in the movement code below. Test different ones out until it works alright
 						bool closeThroughWall = between < 100f;
-						if (((closest && inRange) || !foundTarget) && (lineOfSight || closeThroughWall))
+						if (((closest && inRange) || !foundTarget))
 						{
 							distanceFromTarget = between;
 							targetCenter = npc.Center;
@@ -269,9 +255,9 @@ namespace QuodAstrum.Projectiles.Minions
 			#region Movement
 
 			// Default movement parameters (here for attacking)
-			float speed = 8f;
-			float inertia = 20f;
-
+			float speed = 20f;
+			float inertia = 2f;
+			int damage = 30;
 			if (foundTarget)
 			{
 				// Minion has a target: attack (here, fly towards the enemy)
@@ -290,7 +276,7 @@ namespace QuodAstrum.Projectiles.Minions
 				if (distanceToIdlePosition > 600f)
 				{
 					// Speed up the minion if it's away from the player
-					speed = 12f;
+					speed = 30f;
 					inertia = 60f;
 				}
 				else
@@ -318,8 +304,6 @@ namespace QuodAstrum.Projectiles.Minions
 			#endregion
 
 			#region Animation and visuals
-			// So it will lean slightly towards the direction it's moving
-			projectile.rotation = projectile.velocity.X * 0.05f;
 
 			// This is a simple "loop through all frames from top to bottom" animation
 			int frameSpeed = 3;
