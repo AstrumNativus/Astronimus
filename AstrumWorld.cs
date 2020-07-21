@@ -28,5 +28,6 @@ namespace QuodAstrum
         public static bool downedDR = false;
         public static bool downedCygma = false;
         public static bool downedMaris = false;
+        public static bool downedML = false;
     }
 }
