@@ -21,83 +21,39 @@ namespace QuodAstrum.Projectiles
             projectile.magic = true;                        //this make the projectile do magic damage
             projectile.tileCollide = false;                 //this make that the projectile does not go thru walls
             projectile.ignoreWater = true;
+            projectile.damage = 20;
+            projectile.alpha = 360;
         }
-
         public override void AI()
         {
-            Player player = Main.player[projectile.owner];
-            float distanceFromTarget = 100000f;
-            Vector2 targetCenter = projectile.position;
-            bool foundTarget = false;
-            if (!foundTarget)
+            projectile.rotation = (float)Math.Atan2((double)projectile.velocity.Y + 1f, (double)projectile.velocity.X) + 1f;
+            int dust = Dust.NewDust(projectile.position, projectile.width, projectile.height / 3, DustID.Vortex);
+            Dust.NewDust(projectile.position, projectile.width, projectile.height / 2, DustID.Vortex);
+            Dust.NewDust(projectile.position, projectile.width, projectile.height, DustID.Vortex);
+            Main.dust[dust].velocity.Y -= 1.2f;
+        }
+        public override void OnHitPlayer(Player target, int damage, bool crit)
+        {
+            if (Main.rand.Next(10) == 0)
             {
-                // This code is required either way, used for finding a target
-                for (int i = 0; i < Main.maxNPCs; i++)
-                {
-                    NPC npc = Main.npc[i];
-                    if (npc.CanBeChasedBy())
-                    {
-                        float between = Vector2.Distance(npc.Center, projectile.Center);
-                        bool closest = Vector2.Distance(projectile.Center, targetCenter) > between;
-                        bool inRange = between < distanceFromTarget;
-                        bool lineOfSight = Collision.CanHitLine(projectile.position, projectile.width, projectile.height, npc.position, npc.width, npc.height);
-                        // Additional check for this specific minion behavior, otherwise it will stop attacking once it dashed through an enemy while flying though tiles afterwards
-                        // The number depends on various parameters seen in the movement code below. Test different ones out until it works alright
-                        bool closeThroughWall = between < 100f;
-                        if (((closest && inRange) || !foundTarget) && (lineOfSight || closeThroughWall))
-                        {
-                            distanceFromTarget = between;
-                            targetCenter = npc.Center;
-                            foundTarget = true;
-                        }
-                    }
-                }
-            };
-            projectile.hostile = foundTarget;
-            float speed = 20f;
-            float inertia = 0.2f;
-
-            if (foundTarget)
-            {
-                // Minion has a target: attack (here, fly towards the enemy)
-                if (distanceFromTarget > 1000f)
-                {
-                    // The immediate range around the target (so it doesn't latch onto it when close)
-                    Vector2 direction = targetCenter - projectile.Center;
-                    direction.Normalize();
-                    direction *= speed;
-                    projectile.velocity = (projectile.velocity * (inertia - 1) + direction);
-                }
+                target.AddBuff(BuffID.Slow, 1920);
             }
-            projectile.rotation += 0.1f;
-            projectile.localAI[0] += 1f;
-
-            if (projectile.localAI[0] > 1000f) //projectile time left before disappears
+            if (Main.rand.Next(25) == 0)
             {
-                projectile.Kill();
+                target.AddBuff(BuffID.Chilled, 960);
             }
-            if (projectile.ai[0] == 0f)
+            if (Main.rand.Next(50) == 0)
             {
-                if (Main.rand.NextBool(5))
-                {
-                    int dust = Dust.NewDust(projectile.position, projectile.width, projectile.height / 2, DustID.AncientLight);
-                    Main.dust[dust].velocity.Y -= 1.2f;
-                }
+                target.AddBuff(mod.BuffType("IcarusFolly"), 480);
             }
-            else
+            if (Main.rand.Next(75) == 0)
             {
-                if (Main.rand.NextBool(3))
-                {
-                    Vector2 dustVel = projectile.velocity;
-                    if (dustVel != Vector2.Zero)
-                    {
-                        dustVel.Normalize();
-                    }
-                    int dust = Dust.NewDust(projectile.position, projectile.width, projectile.height, DustID.AncientLight);
-                    Main.dust[dust].velocity -= 1.2f * dustVel;
-                }
+                target.AddBuff(BuffID.Confused, 240);
             }
-            Lighting.AddLight((int)(projectile.Center.X / 16f), (int)(projectile.Center.Y / 16f), 0.6f, 0.9f, 0.3f);
+            if (Main.rand.Next(1000) == 0)
+            {
+                target.AddBuff(BuffID.Stoned, 60);
+            }
         }
     }
 }
